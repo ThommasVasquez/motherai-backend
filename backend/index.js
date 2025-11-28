@@ -80,6 +80,10 @@ app.get("/", (req, res) => {
   res.status(200).send("<h1> Hello </h1>");
 });
 
+app.get("/health", (req, res) => {
+  res.status(200).send("<h1> health </h1>");
+});
+
 app.listen(process.env.PORT, () => {
   console.log("Server is running...");
 });
