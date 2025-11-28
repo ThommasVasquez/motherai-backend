@@ -23,7 +23,6 @@ dotenv.config();
 
 const app = express();
 
-// 🔹 CORS bien configurado para local + Vercel
 const allowedOrigins = [
     "http://localhost:5173",
     "https://yx-ai-platform.vercel.app",
@@ -38,7 +37,7 @@ const corsOptions = {
     },
     credentials: true,
     methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["*"],
 };
 
 app.use(cors(corsOptions));
@@ -57,4 +56,27 @@ app.use(
     })
 );
 
-// tus app.use("/users", router) y demás rutas igual que ya tenías
+app.use("/users", router);
+app.use("/website", websiteRouter);
+app.use("/orchestration", orchestrationRouter);
+app.use("/copywriting", copyWritingRouter);
+app.use("/seo", seoRouter);
+app.use("/video", videoRouter);
+app.use("/transcribe", transcribeRouter);
+app.use("/motherAI", motherAiRouter);
+app.use("/image", imageRouter);
+app.use("/convo", convoRouter);
+app.use("/automation", automationRouter);
+app.use("/auth", googleRouter);
+app.use("/payment", paymentRouter);
+app.use("/scrap", scrapperRouter);
+app.use("/df", deepFakeRouter);
+
+app.get("/test", (req, res) => {
+    res.status(200).send("<h1> Hello  Here!!!! </h1>");
+});
+
+app.listen(process.env.PORT, () => {
+    console.log("Server is running...");
+});
+
