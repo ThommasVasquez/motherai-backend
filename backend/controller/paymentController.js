@@ -205,7 +205,7 @@ async function checkSubscription(userId) {
             .input('UserID', sql.Int, userId)
             .query(`
         SELECT * FROM Subscriptions
-        WHERE UserId = @UserID
+        WHERE Id = @UserID
     `);
 
         const user = result.recordset[0];
