@@ -106,10 +106,10 @@ async function orchestrationAgent(req, res) {
         const { instruction, userId } = req.body;
 
         // TODO: Eliminado coprobacion susbcripcion para testing
-        // var checkSub = await checkSubscription(userId)
-        // if (!checkSub) {
-        //     return res.status(400).json({ error: "Kindly Check your Subscription" });
-        // }
+        var checkSub = await checkSubscription(userId)
+        if (!checkSub) {
+            return res.status(400).json({ error: "Kindly Check your Subscription" });
+        }
         const response = await chooseAgent(instruction);
         return res.status(200).json({ selectedAgent: response });
     } catch (error) {
