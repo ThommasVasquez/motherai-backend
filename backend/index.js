@@ -19,28 +19,31 @@ const { scrapperRouter } = require("./routes/scrapperRoutes");
 const { deepFakeRouter } = require("./routes/deepFake");
 const dotenv = require("dotenv");
 
+
 dotenv.config();
 
 const app = express();
 
 const allowedOrigins = [
-  "http://localhost:5173",
+  "http://localhost:3000",
   "https://yx-ai-platform.vercel.app",
 ];
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error("Not allowed by CORS"));
-  },
-  credentials: true,
-  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: ["*"],
-};
+// const corsOptions = {
+//   origin: function (origin, callback) {
+//     if (!origin || allowedOrigins.includes(origin)) {
+//       return callback(null, true);
+//     }
+//     return callback(new Error("Not allowed by CORS"));
+//   },
+//   credentials: true,
+//   methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+//   allowedHeaders: ["*"],
+// };
 
-app.use(cors(corsOptions));
+// app.use(cors(corsOptions));
+
+app.use(cors({ origin: "*" }));
 
 app.use(json());
 app.use(
@@ -76,7 +79,11 @@ app.get("/test", (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.status(200).send("<h1> Live </h1>");
+  res.status(200).send("<h1> Hello </h1>");
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).send("<h1> health </h1>");
 });
 
 app.listen(process.env.PORT, () => {
