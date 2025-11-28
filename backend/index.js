@@ -23,30 +23,27 @@ dotenv.config();
 
 const app = express();
 
-// 🔹 1. Configuración CORS para Vercel + local
+// 🔹 CORS bien configurado para local + Vercel
 const allowedOrigins = [
-    "http://localhost:5173",              // dev
-    "https://yx-ai-platform.vercel.app",  // producción en Vercel
+    "http://localhost:5173",
+    "https://yx-ai-platform.vercel.app",
 ];
 
 const corsOptions = {
     origin: function (origin, callback) {
-        // Algunas peticiones (como Postman) no traen origin -> se permiten
         if (!origin || allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
         return callback(new Error("Not allowed by CORS"));
     },
-    credentials: true, // importante si usas cookies / sesión
+    credentials: true,
     methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
 };
 
-// 🔹 2. Primero CORS (incluido preflight)
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // maneja OPTIONS para todas las rutas
+app.options("*", cors(corsOptions)); // preflight
 
-// 🔹 3. Luego body parser y sesión
 app.use(json());
 app.use(
     session({
@@ -54,33 +51,10 @@ app.use(
         saveUninitialized: false,
         resave: false,
         cookie: {
-            secure: false, // si luego pones true en producción, recuerda configurar trust proxy
+            secure: false,
             maxAge: 24 * 60 * 60 * 10000,
         },
     })
 );
 
-// 🔹 4. Tus rutas
-app.use("/users", router);
-app.use("/website", websiteRouter);
-app.use("/orchestration", orchestrationRouter);
-app.use("/copywriting", copyWritingRouter);
-app.use("/seo", seoRouter);
-app.use("/video", videoRouter);
-app.use("/transcribe", transcribeRouter);
-app.use("/motherAI", motherAiRouter);
-app.use("/image", imageRouter);
-app.use("/convo", convoRouter);
-app.use("/automation", automationRouter);
-app.use("/auth", googleRouter);
-app.use("/payment", paymentRouter);
-app.use("/scrap", scrapperRouter);
-app.use("/df", deepFakeRouter);
-
-app.get("/test", (req, res) => {
-    res.status(200).send("<h1> Hello  Here!!!! </h1>");
-});
-
-app.listen(process.env.PORT, () => {
-    console.log("Server is running...");
-});
+// tus app.use("/users", router) y demás rutas igual que ya tenías
