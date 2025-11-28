@@ -1,106 +1,102 @@
-const { sqlConfig } = require("../config/index")
-const sql = require("mssql")
-const bcrypt = require("bcrypt")
-const crypto = require("crypto")
-const { sendEmail } = require("../Emails")
+const { sqlConfig } = require("../config/index");
+const sql = require("mssql");
+const bcrypt = require("bcrypt");
+const crypto = require("crypto");
+const { sendEmail } = require("../Emails");
 
 async function register(req, res) {
-    try {
-        const { email, name, password } = req.body
-        const hashedPassword = await bcrypt.hash(password, 8)
-const pool = await sql.connect(sqlConfig);
+  try {
+    const { email, name, password } = req.body;
+    const pool = await sql.connect(sqlConfig);
 
-const result = await pool.request()
-    .input('Email', sql.NVarChar, email)
-    .input('Name', sql.NVarChar, name)
-    .input('Password', sql.NVarChar, hashedPassword)
-    .query(`
+    // check if user exist
+    const existingUSer = await pool
+      .request()
+      .input("Email", sql.NVarChar, email)
+      .query("SELECT * FROM Users WHERE Email = @Email");
+
+    if (existingUSer) {
+      return res.status(400).json({ message: "User Already Exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 8);
+    const result = await pool
+      .request()
+      .input("Email", sql.NVarChar, email)
+      .input("Name", sql.NVarChar, name)
+      .input("Password", sql.NVarChar, hashedPassword).query(`
         INSERT INTO Users (Email, Name, Password)
         OUTPUT INSERTED.Id
         VALUES (@Email, @Name, @Password)
     `);
 
     const insertedId = result.recordset[0].Id;
-
-
-        await pool.request()
-            .input('Email', sql.NVarChar, email)
-             .input('UserId', sql.NVarChar, insertedId.toString())
-            .query(`
+    await pool
+      .request()
+      .input("Email", sql.NVarChar, email)
+      .input("UserId", sql.NVarChar, insertedId.toString()).query(`
                 INSERT INTO Subscriptions (Email,UserId)
                 VALUES (@Email, @UserId)
             `);
-
-
-        return res.status(200).json({ message: "User Registered Successfully" })
-    } catch (error) {
-
-      
-
-        return res.status(500).json({ message: error.message })
-    }
+    return res.status(200).json({ message: "User Registered Successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 }
-
-
-
 
 async function login(req, res) {
-    try {
+  try {
+    const { email, password } = req.body;
+    // Get Existing User
+    const pool = await sql.connect(sqlConfig);
+    const existingUSer = await pool
+      .request()
+      .input("Email", sql.NVarChar, email)
+      .query("SELECT * FROM Users WHERE Email = @Email");
 
-        const { email, password } = req.body
-        // Get Existing User
-        const pool = await sql.connect(sqlConfig)
-        const existingUSer = await pool.request()
-            .input('Email', sql.NVarChar, email)
-            .query('SELECT * FROM Users WHERE Email = @Email')
-
-        if (existingUSer) {
-            const user = existingUSer.recordset[0]
-            const isPasswordValid = await bcrypt.compare(password, user.Password)
-            if (isPasswordValid) {
-                const theResult = {
-                    id: user.Id,
-                    email: user.Email,
-                    message: "Login Successful"
-                }
-                return res.status(200).json(theResult)
-            } else {
-                return res.status(400).json({ message: "Invalid Credentials" })
-            }
-        } else {
-            return res.status(404).json({ message: "User not found" })
-        }
-
-
-
-    } catch (error) {
-        return res.status(500).json({ message: error.message })
+    if (existingUSer) {
+      const user = existingUSer.recordset[0];
+      const isPasswordValid = await bcrypt.compare(password, user.Password);
+      if (isPasswordValid) {
+        const theResult = {
+          id: user.Id,
+          email: user.Email,
+          message: "Login Successful",
+        };
+        return res.status(200).json(theResult);
+      } else {
+        return res.status(400).json({ message: "Invalid Credentials" });
+      }
+    } else {
+      return res.status(404).json({ message: "User not found" });
     }
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 }
 
-
 async function forgotPassword(req, res) {
+  try {
+    const { email, url } = req.body;
+    const pool = await sql.connect(sqlConfig);
+    const result = await pool
+      .request()
+      .input("Email", sql.NVarChar, email)
+      .query("SELECT * FROM Users WHERE Email = @Email");
 
-    try {
-        const { email, url } = req.body
-        const pool = await sql.connect(sqlConfig)
-        const result = await pool.request()
-            .input("Email", sql.NVarChar, email)
-            .query("SELECT * FROM Users WHERE Email = @Email");
+    const user = result.recordset[0];
+    if (!user) {
+      return res.status(404).json({ message: "User Not Found" });
+    }
+    const randomBytes = crypto.randomBytes(24);
+    const passwordResetToken = randomBytes.toString("hex");
+    const passwordResetExpires = new Date(Date.now() + 3 * 60 * 60 * 1000);
 
-        const user = result.recordset[0];
-        if (!user) {
-            return res.status(404).json({ message: "User Not Found" })
-        }
-        const randomBytes = crypto.randomBytes(24);
-        const passwordResetToken = randomBytes.toString("hex");
-        const passwordResetExpires = new Date(Date.now() + 3 * 60 * 60 * 1000);
-
-        await pool.request()
-            .input("Email", sql.NVarChar, email)
-            .input("PasswordResetToken", sql.NVarChar, passwordResetToken)
-            .input("PasswordResetExpires", sql.DateTime, passwordResetExpires)
-            .query(`
+    await pool
+      .request()
+      .input("Email", sql.NVarChar, email)
+      .input("PasswordResetToken", sql.NVarChar, passwordResetToken)
+      .input("PasswordResetExpires", sql.DateTime, passwordResetExpires).query(`
             UPDATE Users
             SET 
             PasswordResetToken = @PasswordResetToken,
@@ -108,8 +104,7 @@ async function forgotPassword(req, res) {
             WHERE Email = @Email
         `);
 
-
-        const prompt = `
+    const prompt = `
         <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -254,58 +249,54 @@ async function forgotPassword(req, res) {
     </div>
 </body>
 </html>
-        `
+        `;
 
-        const message = {
-            from: process.env.EMAIL,
-            to: user.Email,
-            subject: "MotherAi Forgot Password",
-            html: prompt
-        }
+    const message = {
+      from: process.env.EMAIL,
+      to: user.Email,
+      subject: "MotherAi Forgot Password",
+      html: prompt,
+    };
 
-        await sendEmail(message)
+    await sendEmail(message);
 
-        return res.status(200).json({ message: "Password reset link sent! Please check your email for instructions to reset your password " })
-
-
-    } catch (error) {
-
-        res.status(500).json({ message: error.message })
-    }
-
-
+    return res.status(200).json({
+      message:
+        "Password reset link sent! Please check your email for instructions to reset your password ",
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 }
 
 async function resetPassword(req, res) {
-    try {
-        const { token, password } = req.body
-        const pool = await sql.connect(sqlConfig)
-        const result = await pool.request()
-            .input("Token", sql.NVarChar, token)
-            .query("SELECT * FROM Users WHERE PasswordResetToken = @Token");
+  try {
+    const { token, password } = req.body;
+    const pool = await sql.connect(sqlConfig);
+    const result = await pool
+      .request()
+      .input("Token", sql.NVarChar, token)
+      .query("SELECT * FROM Users WHERE PasswordResetToken = @Token");
 
-        const user = result.recordset[0];
+    const user = result.recordset[0];
 
+    if (!user) {
+      return res.status(404).json({ message: "User Not Found" });
+    }
 
-        if (!user) {
-            return res.status(404).json({ message: "User Not Found" })
-        }
+    // 2. Check if token has expired
+    const tokenExpiry = new Date(user.PasswordResetExpires);
+    const now = new Date();
 
-        // 2. Check if token has expired
-        const tokenExpiry = new Date(user.PasswordResetExpires);
-        const now = new Date();
+    if (tokenExpiry > now) {
+      const hashedPassword = await bcrypt.hash(password, 10);
 
-
-
-        if (tokenExpiry > now) {
-            const hashedPassword = await bcrypt.hash(password, 10);
-
-            await pool.request()
-                .input("Email", sql.NVarChar, user.Email)
-                .input("Password", sql.NVarChar, hashedPassword)
-                .input("PasswordResetToken", sql.NVarChar, "")
-                .input("PasswordResetExpires", sql.DateTime, new Date())
-                .query(`
+      await pool
+        .request()
+        .input("Email", sql.NVarChar, user.Email)
+        .input("Password", sql.NVarChar, hashedPassword)
+        .input("PasswordResetToken", sql.NVarChar, "")
+        .input("PasswordResetExpires", sql.DateTime, new Date()).query(`
           UPDATE Users
           SET 
             Password = @Password,
@@ -314,17 +305,13 @@ async function resetPassword(req, res) {
           WHERE Email = @Email
         `);
 
-
-            return res.status(200).json({ message: "Password Reset Successfully" })
-        } else {
-            return res.status(400).json({ message: "Token Expired" })
-        }
-    } catch (error) {
-        return res.status(500).json({ message: error.message })
+      return res.status(200).json({ message: "Password Reset Successfully" });
+    } else {
+      return res.status(400).json({ message: "Token Expired" });
     }
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 }
 
-
-
-
-module.exports = { register, login, forgotPassword, resetPassword }
+module.exports = { register, login, forgotPassword, resetPassword };
