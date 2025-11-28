@@ -19,13 +19,12 @@ const { scrapperRouter } = require("./routes/scrapperRoutes");
 const { deepFakeRouter } = require("./routes/deepFake");
 const dotenv = require("dotenv");
 
-
 dotenv.config();
 
 const app = express();
 
 const allowedOrigins = [
-  "http://localhost:3000",
+  "http://localhost:5173",
   "https://yx-ai-platform.vercel.app",
 ];
 
@@ -77,11 +76,7 @@ app.get("/test", (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.status(200).send("<h1> Hello </h1>");
-});
-
-app.get("/health", (req, res) => {
-  res.status(200).send("<h1> health </h1>");
+  res.status(200).send("<h1> Live </h1>");
 });
 
 app.listen(process.env.PORT, () => {
