@@ -19,6 +19,7 @@ const { scrapperRouter } = require("./routes/scrapperRoutes");
 const { deepFakeRouter } = require("./routes/deepFake");
 const dotenv = require("dotenv");
 
+
 dotenv.config();
 
 const app = express();
